@@ -1,10 +1,16 @@
 package com.app.foodbackend.security.user.service;
 
+import com.app.foodbackend.security.auth.dto.RegisterRequest;
 import com.app.foodbackend.security.user.entity.Role;
 import com.app.foodbackend.security.user.entity.User;
+import com.app.foodbackend.security.user.repository.RoleRepository;
 import com.app.foodbackend.security.user.repository.UserRepository;
+import com.app.foodbackend.security.user.requestDTO.UserRequest;
 import jakarta.annotation.PostConstruct;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +22,7 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final RoleService roleService;
 
@@ -55,5 +62,73 @@ public class UserService {
         }
 
         userRepository.saveAll(users);
+    }
+
+    public void saveUser(RegisterRequest request) throws Exception {
+        if(request == null){
+            throw new Exception();
+        }
+        if(!roleRepository.existsByName(request.getRole().toUpperCase())){
+            throw new Exception();
+        }
+
+        User user = User.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmail())
+                .userName(request.getUserName())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(roleService.getRole(request.getRole().toUpperCase()))
+                .build();
+
+        userRepository.save(user);
+    }
+
+    public void deleteUser(Integer id) throws NullPointerException{
+        if(userRepository.existsById(id) == false){
+            throw new NullPointerException();
+        }
+
+        userRepository.deleteById(id);
+        SecurityContextHolder.clearContext();
+    }
+    public List<User> getAllUsers(){
+        return userRepository.findAll();
+    }
+
+    @Transactional
+    public void updateUser(UserRequest user) throws NullPointerException {
+
+        User existingUser = userRepository.findById(user.getId()).orElseThrow(() -> new NullPointerException("User not found in the database"));
+
+        existingUser.setFirstName(user.getFirstName());
+        existingUser.setLastName(user.getLastName());
+        existingUser.setUserName(user.getUserName());
+        existingUser.setEmail(user.getEmail());
+
+        userRepository.save(existingUser);
+    }
+
+    public void controlRole(Integer id) throws Exception {
+        // Get the authentication object from the security context
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Check if the user has the 'ADMIN' role
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        if(isAdmin == false){
+            if(!checkId(authentication.getName(), id)){
+                throw new Exception();
+            }
+        }
+    }
+
+    public boolean checkId(String username, Integer id) {
+        User user = userRepository.findByUserName(username).orElseThrow();
+        if(user.getId() != id){
+            return false;
+        }
+        return true;
     }
 }
