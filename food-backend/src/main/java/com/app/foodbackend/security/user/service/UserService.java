@@ -44,7 +44,7 @@ public class UserService {
             }
         }
 
-        if(userRepository.existsByEmail("furkan@gmail.com") == false){
+        if(userRepository.numberOfRoles(1) == 0){
             adminUser.setFirstName("Furkan");
             adminUser.setLastName("Furkan");
             adminUser.setEmail("furkan@gmail.com");
@@ -52,7 +52,7 @@ public class UserService {
             adminUser.setPassword(passwordEncoder.encode("123"));
             users.add(adminUser);
         }
-        if(userRepository.existsByEmail("ali@gmail.com") == false){
+        if(userRepository.numberOfRoles(2) == 0){
             visitorUser.setFirstName("Ali");
             visitorUser.setLastName("Ali");
             visitorUser.setEmail("ali@gmail.com");
@@ -61,7 +61,9 @@ public class UserService {
             users.add(visitorUser);
         }
 
-        userRepository.saveAll(users);
+        if(!users.isEmpty()){
+            userRepository.saveAll(users);
+        }
     }
 
     public void saveUser(RegisterRequest request) throws Exception {

@@ -2,6 +2,8 @@ package com.app.foodbackend.security.user.repository;
 
 import com.app.foodbackend.security.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -17,4 +19,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     boolean existsByEmail(String email);
 
     boolean existsById(Integer id);
+
+    @Query(value = "SELECT COUNT(role_id) FROM _user WHERE role_id= :role_id", nativeQuery = true)
+    Integer numberOfRoles(@Param("role_id") Integer roleId);
 }
