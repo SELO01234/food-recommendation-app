@@ -1,21 +1,27 @@
 package com.app.foodbackend.security.user.service;
 
+import com.app.foodbackend.food.repository.FoodRepository;
 import com.app.foodbackend.security.auth.dto.RegisterRequest;
 import com.app.foodbackend.security.user.entity.Role;
 import com.app.foodbackend.security.user.entity.User;
+import com.app.foodbackend.security.user.entity.UserFoodRating;
 import com.app.foodbackend.security.user.repository.RoleRepository;
+import com.app.foodbackend.security.user.repository.UserFoodRatingRepository;
 import com.app.foodbackend.security.user.repository.UserRepository;
 import com.app.foodbackend.security.user.requestDTO.UserRequest;
+import com.app.foodbackend.util.UserUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +29,8 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final FoodRepository foodRepository;
+    private final UserFoodRatingRepository userFoodRatingRepository;
     private final PasswordEncoder passwordEncoder;
     private final RoleService roleService;
 
@@ -67,7 +75,7 @@ public class UserService {
     }
 
     public void saveUser(RegisterRequest request) throws Exception {
-        if(request == null){
+        if(request == null || userRepository.existsByUserName(request.getUserName())){
             throw new Exception();
         }
         if(!roleRepository.existsByName(request.getRole().toUpperCase())){
@@ -132,5 +140,37 @@ public class UserService {
             return false;
         }
         return true;
+    }
+
+    @Transactional
+    public void addVisitedFood(Integer foodId) throws Exception {
+
+        if(foodRepository.existsById(foodId) == false){
+            throw new Exception();
+        }
+
+        String username = UserUtil.getUsername();
+
+        User user = userRepository.findByUserName(username).orElseThrow();
+
+        if(userFoodRatingRepository.isFoodExistsByIds(user.getId(), foodId)){
+            throw new Exception();
+        }
+
+        UserFoodRating userFoodRating = UserFoodRating.builder()
+                .user(user)
+                .food(foodRepository.findById(foodId).orElseThrow())
+                .build();
+
+        userFoodRatingRepository.save(userFoodRating);
+    }
+
+    public List<String> findVisitedFoodsByUserId() throws Exception{
+
+        String username = UserUtil.getUsername();
+
+        User user = userRepository.findByUserName(username).orElseThrow();
+
+        return userFoodRatingRepository.findFoodNamesByUserId(user.getId());
     }
 }

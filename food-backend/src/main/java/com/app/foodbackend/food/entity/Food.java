@@ -1,10 +1,15 @@
 package com.app.foodbackend.food.entity;
 
+import com.app.foodbackend.security.user.entity.UserFoodRating;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
+import java.util.Set;
 
 
 @Data
@@ -44,5 +49,9 @@ public class Food {
     @Column(columnDefinition = "TEXT")
     private String searchTerms;
 
-    private Integer rating;
+    private float rating;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "food")
+    private List<UserFoodRating> userLogs;
 }

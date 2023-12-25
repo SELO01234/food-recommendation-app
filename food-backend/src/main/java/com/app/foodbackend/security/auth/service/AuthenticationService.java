@@ -33,7 +33,7 @@ public class AuthenticationService {
 
     public void register(RegisterRequest request) throws Exception{
 
-        if(request == null){
+        if(request == null || userRepository.existsByUserName(request.getUserName())){
             throw new Exception();
         }
 

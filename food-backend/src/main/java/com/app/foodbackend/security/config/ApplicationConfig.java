@@ -3,6 +3,7 @@ package com.app.foodbackend.security.config;
 import com.app.foodbackend.security.user.entity.User;
 import com.app.foodbackend.security.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -54,6 +55,7 @@ public class ApplicationConfig {
     }
 
     @Bean
+    @LoadBalanced
     RestTemplate restTemplate() {
         return new RestTemplate();
     }

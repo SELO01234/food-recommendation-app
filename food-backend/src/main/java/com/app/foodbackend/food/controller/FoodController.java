@@ -1,5 +1,6 @@
 package com.app.foodbackend.food.controller;
 
+import com.app.foodbackend.food.dto.FoodResponse;
 import com.app.foodbackend.food.entity.Food;
 import com.app.foodbackend.food.entity.FoodDTO;
 import com.app.foodbackend.food.service.FoodService;
@@ -20,6 +21,21 @@ public class FoodController {
         return foodService.getFood(ingredients);
     }
 
+    @GetMapping("/get/all-foods")
+    public List<Food> getAllFoods(){
+        return foodService.getAllFoods();
+    }
+
+    @GetMapping("/get/{id}")
+    public ResponseEntity<FoodResponse> getFoodById(@PathVariable("id") Integer id){
+        try{
+            return ResponseEntity.ok().body(foodService.getFoodById(id));
+        }
+        catch(Exception exception){
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @GetMapping("/get/ingredients")
     public ResponseEntity<List<String>> getAllIngredients(){
         return ResponseEntity.ok().body(foodService.getAllIngredients());
@@ -32,7 +48,18 @@ public class FoodController {
             return ResponseEntity.ok().body("Food added successfully");
         }
         catch (Exception e){
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PutMapping("/update/rating/{id}/{rating}")
+    public ResponseEntity<String> updateRating(@PathVariable("id") Integer foodId, @PathVariable("rating") float rating){
+        try{
+            foodService.updateRating(foodId, rating);
+            return ResponseEntity.ok().body("Rating updated successfully");
+        }
+        catch (Exception exception){
+            return ResponseEntity.unprocessableEntity().build();
         }
     }
 }

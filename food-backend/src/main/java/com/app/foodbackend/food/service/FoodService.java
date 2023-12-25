@@ -1,16 +1,24 @@
 package com.app.foodbackend.food.service;
 
 
+import com.app.foodbackend.food.dto.FoodResponse;
 import com.app.foodbackend.food.entity.Food;
 import com.app.foodbackend.food.entity.FoodDTO;
 import com.app.foodbackend.food.repository.FoodRepository;
 import com.app.foodbackend.search.model.RequestFilter;
 import com.app.foodbackend.search.model.SearchRequestDTO;
 import com.app.foodbackend.search.service.SearchService;
+import com.app.foodbackend.security.user.entity.User;
+import com.app.foodbackend.security.user.entity.UserFoodRating;
+import com.app.foodbackend.security.user.repository.UserFoodRatingRepository;
+import com.app.foodbackend.security.user.repository.UserRepository;
+import com.app.foodbackend.util.UserUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -25,12 +33,18 @@ import java.util.stream.Collectors;
 public class FoodService extends SearchService<Food> {
 
     private final FoodRepository foodRepository;
+    private final UserFoodRatingRepository userFoodRatingRepository;
+    private final UserRepository userRepository;
     private final RestTemplate restTemplate;
 
+    private static final String SECRET_KEY_FOR_FLASK = "ryt4f7@jvrn(6w^cg_d+idh3mj7=a!6fguh92rn)#x-omd2^$p";
+
     @Autowired
-    public FoodService(EntityManager entityManager, FoodRepository foodRepository, RestTemplate restTemplate) {
+    public FoodService(EntityManager entityManager, FoodRepository foodRepository, UserFoodRatingRepository userFoodRatingRepository, UserRepository userRepository, RestTemplate restTemplate) {
         super(entityManager);
         this.foodRepository = foodRepository;
+        this.userFoodRatingRepository = userFoodRatingRepository;
+        this.userRepository = userRepository;
         this.restTemplate = restTemplate;
     }
 
@@ -64,16 +78,31 @@ public class FoodService extends SearchService<Food> {
         Food food = new Food();
         food.setName(values[0]);
         food.setDescription(values[1]);
-        food.setIngredients(values[2]);
-        food.setIngredientsRawStr(values[3]);
+        food.setIngredients(convertSingleQuotes(values[2]));
+        food.setIngredientsRawStr(removeQuotes(values[3]));
         food.setServingSize(values[4]);
         food.setServings(Integer.parseInt(values[5]));
-        food.setSteps(values[6]);
-        food.setTags(values[7]);
-        food.setSearchTerms(values[8]);
+        food.setSteps(convertSingleQuotes(values[6]));
+        food.setTags(convertSingleQuotes(values[7]));
+        food.setSearchTerms(convertSingleQuotesAndCurlyBrackets(values[8]));
 
         return food;
     }
+
+    private String removeQuotes(String value) {
+        String trimmedValue = value.replaceAll("^\"|\"$", "");
+        return trimmedValue.replaceAll("\"{2}", "\"");
+    }
+    private String convertSingleQuotes(String value) {
+        // Replace single quotes with double quotes
+        return value.replaceAll("'", "\"");
+    }
+
+    private String convertSingleQuotesAndCurlyBrackets(String value) {
+        // Replace single quotes with double quotes and curly brackets with square brackets
+        return value.replaceAll("'", "\"").replaceAll("\\{", "[").replaceAll("\\}", "]");
+    }
+
 
     public void addFood(FoodDTO foodDTO) throws Exception {
         if(foodDTO == null){
@@ -114,12 +143,84 @@ public class FoodService extends SearchService<Food> {
                 .build();
 
         List<Food> foods = search(requestDTO);
-        Food result = restTemplate.postForObject("http://127.0.0.1:5000/get-food", foods,Food.class);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + SECRET_KEY_FOR_FLASK);
+        HttpEntity<List<Food>> requestEntity = new HttpEntity<>(foods, headers);
+
+        Food result = restTemplate.postForObject("http://data-service/get-food", requestEntity,Food.class);
         return result;
+    }
+
+    public List<Food> getAllFoods() {
+        return foodRepository.findAll();
+    }
+
+    public FoodResponse getFoodById(Integer foodId) {
+        Food food = foodRepository.findById(foodId).orElseThrow();
+
+        String username = UserUtil.getUsername();
+        Integer userId = (userRepository.findByUserName(username).orElseThrow()).getId();
+
+        Float userRating = userFoodRatingRepository.findFoodRatingOfUser(userId, foodId);
+
+        return FoodResponse.builder()
+                .name(food.getName())
+                .description(food.getDescription())
+                .ingredients(food.getIngredients())
+                .ingredientsRawStr(food.getIngredientsRawStr())
+                .servingSize(food.getServingSize())
+                .servings(food.getServings())
+                .steps(food.getSteps())
+                .tags(food.getTags())
+                .searchTerms(food.getSearchTerms())
+                .rating(food.getRating())
+                .userRating(userRating)
+                .build();
     }
 
     public List<String> getAllIngredients() {
         return foodRepository.findUniqueIngredients();
+    }
+
+    @Transactional
+    public void updateRating(Integer foodId, float rating) throws Exception{
+
+        String username = UserUtil.getUsername();
+
+        User user = userRepository.findByUserName(username).orElseThrow();
+
+        //If user did not visit this food
+        if(!userFoodRatingRepository.isFoodExistsByIds(user.getId(), foodId)){
+            throw new Exception();
+        }
+
+        UserFoodRating userFoodRating = userFoodRatingRepository.findAFood(user.getId(), foodId);
+
+        updateUsersFoodRating(userFoodRating, rating);
+
+        List<Float> ratings = userFoodRatingRepository.getFoodRatings(foodId);
+        Float count = (userFoodRatingRepository.getFoodCount(foodId)).floatValue();
+
+        Float newRating= 0.0F;
+
+        for(int i=0; i < ratings.size(); ++i){
+            newRating += ratings.get(i);
+        }
+
+        newRating = newRating / count;
+
+        Food food = foodRepository.findById(foodId).orElseThrow();
+        food.setRating(newRating);
+
+        foodRepository.save(food);
+
+    }
+
+    @Transactional
+    public void updateUsersFoodRating(UserFoodRating userFoodRating,float rating){
+        userFoodRating.setRating(rating);
+        userFoodRatingRepository.save(userFoodRating);
     }
 
     @Override
@@ -131,4 +232,5 @@ public class FoodService extends SearchService<Food> {
     protected Class<Food> getEntityClass() {
         return Food.class;
     }
+
 }

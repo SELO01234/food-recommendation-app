@@ -1,5 +1,6 @@
 package com.app.foodbackend.security.user.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +10,9 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Data
 @Builder
@@ -23,6 +27,7 @@ public class User implements UserDetails {
     private Integer id;
     private String firstName;
     private String lastName;
+    @Column(unique = true)
     private String userName;
     private String email;
     private String password;
@@ -30,6 +35,9 @@ public class User implements UserDetails {
     @ManyToOne(fetch = FetchType.EAGER)
     private Role role;
 
+    @JsonIgnore
+    @OneToMany(mappedBy = "user")
+    private List<UserFoodRating> foodLogs;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
