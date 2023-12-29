@@ -7,13 +7,14 @@ import com.app.foodbackend.security.config.JwtService;
 import com.app.foodbackend.security.user.entity.User;
 import com.app.foodbackend.security.user.repository.UserRepository;
 import com.app.foodbackend.security.user.service.RoleService;
+import com.app.foodbackend.util.UserUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +34,11 @@ public class AuthenticationService {
 
     public void register(RegisterRequest request) throws Exception{
 
-        if(request == null || userRepository.existsByUserName(request.getUserName())){
+        if(
+                request == null ||
+                userRepository.existsByUserName(request.getUserName()) || userRepository.existsByEmail(request.getEmail()) ||
+                !request.getEmail().matches(UserUtil.EMAIL_REGEX)
+        ){
             throw new Exception();
         }
 
@@ -55,7 +60,14 @@ public class AuthenticationService {
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
 
-        var user = userRepository.findByUserName(request.getUsername()).orElseThrow();
+        User user;
+
+        if(request.getUsername().matches(UserUtil.EMAIL_REGEX)){
+            user = userRepository.findByEmail(request.getUsername()).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        }
+        else{
+            user = userRepository.findByUserName(request.getUsername()).orElseThrow();
+        }
 
         var access_token = jwtService.generateToken(user, "access_token");
         var refresh_token = jwtService.generateToken(user, "refresh_token");

@@ -2,16 +2,17 @@ package com.app.foodbackend.food.service;
 
 
 import com.app.foodbackend.food.dto.FoodResponse;
+import com.app.foodbackend.food.dto.SuggestionDTO;
 import com.app.foodbackend.food.entity.Food;
-import com.app.foodbackend.food.entity.FoodDTO;
+import com.app.foodbackend.food.dto.FoodDTO;
 import com.app.foodbackend.food.repository.FoodRepository;
-import com.app.foodbackend.search.model.RequestFilter;
 import com.app.foodbackend.search.model.SearchRequestDTO;
 import com.app.foodbackend.search.service.SearchService;
 import com.app.foodbackend.security.user.entity.User;
 import com.app.foodbackend.security.user.entity.UserFoodRating;
 import com.app.foodbackend.security.user.repository.UserFoodRatingRepository;
 import com.app.foodbackend.security.user.repository.UserRepository;
+import com.app.foodbackend.security.user.service.UserService;
 import com.app.foodbackend.util.UserUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
@@ -26,8 +27,6 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Service
 public class FoodService extends SearchService<Food> {
@@ -37,15 +36,18 @@ public class FoodService extends SearchService<Food> {
     private final UserRepository userRepository;
     private final RestTemplate restTemplate;
 
+    private final UserService userService;
+
     private static final String SECRET_KEY_FOR_FLASK = "ryt4f7@jvrn(6w^cg_d+idh3mj7=a!6fguh92rn)#x-omd2^$p";
 
     @Autowired
-    public FoodService(EntityManager entityManager, FoodRepository foodRepository, UserFoodRatingRepository userFoodRatingRepository, UserRepository userRepository, RestTemplate restTemplate) {
+    public FoodService(EntityManager entityManager, FoodRepository foodRepository, UserFoodRatingRepository userFoodRatingRepository, UserRepository userRepository, RestTemplate restTemplate, UserService userService) {
         super(entityManager);
         this.foodRepository = foodRepository;
         this.userFoodRatingRepository = userFoodRatingRepository;
         this.userRepository = userRepository;
         this.restTemplate = restTemplate;
+        this.userService = userService;
     }
 
     @PostConstruct
@@ -123,32 +125,17 @@ public class FoodService extends SearchService<Food> {
         foodRepository.save(food);
     }
 
-    public Food getFood(List<String> ingredients) {
+    public List<Food> getFoodSuggestion(List<String> ingredients) throws Exception {
 
-        List<RequestFilter> requestFilters = ingredients.stream().map( ingredient -> {
+        List<String> visitedFoods = userService.findVisitedFoodsByUserId();
 
-            String ingredientString = "\'" + ingredient + "\'";
-
-            RequestFilter requestFilter = RequestFilter.builder()
-                    .field("ingredients")
-                    .value(ingredientString)
-                    .operator("CONTAINS")
-                    .build();
-
-            return requestFilter;
-        }).filter(Objects::nonNull).collect(Collectors.toList());
-
-        SearchRequestDTO requestDTO = SearchRequestDTO.builder()
-                .filters(requestFilters)
-                .build();
-
-        List<Food> foods = search(requestDTO);
+        SuggestionDTO suggestionDTO = new SuggestionDTO(ingredients, visitedFoods);
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + SECRET_KEY_FOR_FLASK);
-        HttpEntity<List<Food>> requestEntity = new HttpEntity<>(foods, headers);
+        HttpEntity<SuggestionDTO> requestEntity = new HttpEntity<>(suggestionDTO, headers);
 
-        Food result = restTemplate.postForObject("http://data-service/get-food", requestEntity,Food.class);
+        List<Food> result = restTemplate.postForObject("http://data-service/get-food", requestEntity,List.class);
         return result;
     }
 
@@ -163,6 +150,10 @@ public class FoodService extends SearchService<Food> {
         Integer userId = (userRepository.findByUserName(username).orElseThrow()).getId();
 
         Float userRating = userFoodRatingRepository.findFoodRatingOfUser(userId, foodId);
+
+        if(userRating == null){
+            userRating = 0.0F;
+        }
 
         return FoodResponse.builder()
                 .name(food.getName())

@@ -2,7 +2,7 @@ package com.app.foodbackend.food.controller;
 
 import com.app.foodbackend.food.dto.FoodResponse;
 import com.app.foodbackend.food.entity.Food;
-import com.app.foodbackend.food.entity.FoodDTO;
+import com.app.foodbackend.food.dto.FoodDTO;
 import com.app.foodbackend.food.service.FoodService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,9 +16,13 @@ import java.util.List;
 public class FoodController {
 
     private final FoodService foodService;
-    @PostMapping("/get")
-    public Food getFood(@RequestBody List<String> ingredients){
-        return foodService.getFood(ingredients);
+    @PostMapping("/get-suggestion")
+    public ResponseEntity<List<Food>> getFoodBySuggestion(@RequestBody List<String> ingredients){
+        try{
+            return ResponseEntity.ok().body(foodService.getFoodSuggestion(ingredients));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @GetMapping("/get/all-foods")

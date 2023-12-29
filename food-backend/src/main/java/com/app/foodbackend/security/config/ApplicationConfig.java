@@ -2,6 +2,7 @@ package com.app.foodbackend.security.config;
 
 import com.app.foodbackend.security.user.entity.User;
 import com.app.foodbackend.security.user.repository.UserRepository;
+import com.app.foodbackend.util.UserUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
@@ -28,8 +29,14 @@ public class ApplicationConfig {
         return new UserDetailsService() {
             @Override
             public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-                User user = userRepository.findByUserName(username).orElseThrow(() -> new UsernameNotFoundException("User not found")); //this is our user entity
-                System.out.println(user.getUsername());
+                User user;
+
+                if(username.matches(UserUtil.EMAIL_REGEX)){
+                    user = userRepository.findByEmail(username).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                }
+                else{
+                    user = userRepository.findByUserName(username).orElseThrow();
+                }
                 return new org.springframework.security.core.userdetails.User(user.getUsername(), user.getPassword(), user.getAuthorities());
             }
         };

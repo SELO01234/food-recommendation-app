@@ -1,4 +1,4 @@
-package com.app.foodbackend.food.entity;
+package com.app.foodbackend.food.dto;
 
 import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
