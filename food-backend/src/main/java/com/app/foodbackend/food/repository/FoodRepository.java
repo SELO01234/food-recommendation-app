@@ -24,4 +24,9 @@ public interface FoodRepository extends JpaRepository<Food, Integer> {
             , nativeQuery = true)
     List<String> findUniqueIngredients();
     boolean existsById(Integer id);
+
+    @Query(value = "SELECT * FROM food ORDER BY rating DESC LIMIT 3", nativeQuery = true)
+    List<Food> getHighestRatedFoods();
+
+    List<Food> findTop3ByOrderByRatingDesc();
 }

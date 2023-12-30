@@ -1,5 +1,6 @@
 package com.app.foodbackend.food.controller;
 
+import com.app.foodbackend.food.dto.FoodCardResponse;
 import com.app.foodbackend.food.dto.FoodResponse;
 import com.app.foodbackend.food.entity.Food;
 import com.app.foodbackend.food.dto.FoodDTO;
@@ -28,6 +29,16 @@ public class FoodController {
     @GetMapping("/get/all-foods")
     public List<Food> getAllFoods(){
         return foodService.getAllFoods();
+    }
+
+    @GetMapping("/get/highest-rated/foods")
+    public ResponseEntity<List<FoodCardResponse>> getHighestRatedFoods(){
+        try{
+            return ResponseEntity.ok().body(foodService.getHighestRatedFoods());
+        }
+        catch (Exception exception){
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @GetMapping("/get/{id}")

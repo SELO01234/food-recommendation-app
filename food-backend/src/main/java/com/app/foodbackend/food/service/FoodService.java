@@ -1,6 +1,7 @@
 package com.app.foodbackend.food.service;
 
 
+import com.app.foodbackend.food.dto.FoodCardResponse;
 import com.app.foodbackend.food.dto.FoodResponse;
 import com.app.foodbackend.food.dto.SuggestionDTO;
 import com.app.foodbackend.food.entity.Food;
@@ -17,6 +18,7 @@ import com.app.foodbackend.util.UserUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
+import org.hibernate.query.spi.Limit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -27,6 +29,8 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class FoodService extends SearchService<Food> {
@@ -143,6 +147,22 @@ public class FoodService extends SearchService<Food> {
         return foodRepository.findAll();
     }
 
+    public List<FoodCardResponse> getHighestRatedFoods() throws Exception{
+        List<Food> response= foodRepository.findTop3ByOrderByRatingDesc();
+
+        List<FoodCardResponse> foodCardResponses = response.stream().map(food -> {
+            FoodCardResponse foodCardResponse = FoodCardResponse.builder()
+                    .id(food.getId())
+                    .name(food.getName())
+                    .description(food.getDescription())
+                    .build();
+
+            return  foodCardResponse;
+        }
+        ).filter(Objects::nonNull).collect(Collectors.toList());
+        return  foodCardResponses;
+    }
+
     public FoodResponse getFoodById(Integer foodId) {
         Food food = foodRepository.findById(foodId).orElseThrow();
 
@@ -223,5 +243,4 @@ public class FoodService extends SearchService<Food> {
     protected Class<Food> getEntityClass() {
         return Food.class;
     }
-
 }
