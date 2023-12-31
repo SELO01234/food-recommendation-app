@@ -30,6 +30,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -58,18 +59,26 @@ public class FoodService extends SearchService<Food> {
     @Transactional
     public void importDataFromCSV(){
         if(foodRepository.numberOfRecords() == 0){
-            String csvFilePath = "C:\\Users\\SELO\\OneDrive\\Masaüstü\\recipes_two.csv";
+            String csvFilePath = "C:\\Users\\SELO\\OneDrive\\Masaüstü\\recipes_four.csv";
             try {
                 BufferedReader br = new BufferedReader(new FileReader(csvFilePath));
                 String headerLine = br.readLine();
 
                 String line;
                 while ((line = br.readLine()) != null) {
+
+                    Pattern pattern = Pattern.compile("\\}(\"|$)\\s*$");
+
+                    while(!pattern.matcher(line).find()){
+                        line = line + br.readLine();
+                    }
                     // Parse the CSV line and create a Food entity
                     Food food = createFoodFromCSVLine(line);
 
                     // Save the Food entity to the database
-                    foodRepository.save(food);
+                    if(food != null){
+                        foodRepository.save(food);
+                    }
                 }
             }
             catch (IOException e){
@@ -79,7 +88,12 @@ public class FoodService extends SearchService<Food> {
     }
 
     private Food createFoodFromCSVLine(String csvLine) {
+
         String[] values = csvLine.split(",(?=([^\\\"]*\\\"[^\\\"]*\\\")*[^\\\"]*$)"); // Assuming CSV is comma-separated
+
+        if(values.length != 9){
+            return null;
+        }
 
         Food food = new Food();
         food.setName(values[0]);
