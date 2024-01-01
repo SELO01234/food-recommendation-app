@@ -115,12 +115,14 @@ public class FoodService extends SearchService<Food> {
     }
     private String convertSingleQuotes(String value) {
         // Replace single quotes with double quotes
-        return value.replaceAll("'", "\"");
+        String replacedValue= value.replaceAll("'", "\"");
+        return replacedValue.replaceAll("^\"|\"$", "");
     }
 
     private String convertSingleQuotesAndCurlyBrackets(String value) {
         // Replace single quotes with double quotes and curly brackets with square brackets
-        return value.replaceAll("'", "\"").replaceAll("\\{", "[").replaceAll("\\}", "]");
+        String replacedValue= value.replaceAll("'", "\"").replaceAll("\\{", "[").replaceAll("\\}", "]");
+        return replacedValue.replaceAll("^\"|\"$", "");
     }
 
 

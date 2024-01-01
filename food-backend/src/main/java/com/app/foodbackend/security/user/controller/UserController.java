@@ -50,7 +50,7 @@ public class UserController {
     public ResponseEntity<String> addVisitedFood(@PathVariable("id") Integer id){
         try{
             userService.addVisitedFood(id);
-            return ResponseEntity.ok().body("Food id added successfully");
+            return ResponseEntity.ok().body("Food is added successfully");
         }
         catch(Exception exception){
             return ResponseEntity.notFound().build();
