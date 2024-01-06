@@ -1,6 +1,7 @@
 package com.app.foodbackend.security.user.repository;
 
 import com.app.foodbackend.security.user.entity.User;
+import com.app.foodbackend.security.user.responseDTO.AdminResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -25,4 +26,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     @Query(value = "SELECT COUNT(role_id) FROM _user WHERE role_id= :role_id", nativeQuery = true)
     Integer numberOfRoles(@Param("role_id") Integer roleId);
+
+    @Query(value = "SELECT * FROM _user WHERE role_id= 1", nativeQuery = true)
+    List<User> getAdmins();
 }

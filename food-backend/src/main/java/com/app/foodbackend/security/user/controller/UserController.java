@@ -31,6 +31,18 @@ public class UserController {
         }
     }
 
+    @DeleteMapping("/delete-user/{username}")
+    @PreAuthorize("hasAuthority('admin:delete')" + "||" + "hasAuthority('visitor:delete')")
+    public ResponseEntity<String> deleteByUsername(@PathVariable("username") String username){
+        try{
+            userService.deleteByUsername(username);
+            return ResponseEntity.ok("Deletion is successfull");
+        }
+        catch(Exception exception){
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
 
     @PutMapping("/update")
     @PreAuthorize("hasAuthority('admin:update')" + "||" + "hasAuthority('visitor:update')")

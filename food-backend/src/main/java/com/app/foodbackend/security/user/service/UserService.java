@@ -9,10 +9,12 @@ import com.app.foodbackend.security.user.repository.RoleRepository;
 import com.app.foodbackend.security.user.repository.UserFoodRatingRepository;
 import com.app.foodbackend.security.user.repository.UserRepository;
 import com.app.foodbackend.security.user.requestDTO.UserRequest;
+import com.app.foodbackend.security.user.responseDTO.AdminResponse;
 import com.app.foodbackend.util.UserUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,7 +23,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -172,5 +176,28 @@ public class UserService {
         User user = userRepository.findByUserName(username).orElseThrow();
 
         return userFoodRatingRepository.findFoodNamesByUserId(user.getId());
+    }
+
+    public void deleteByUsername(String username) {
+        User user = userRepository.findByUserName(username).orElseThrow();
+        deleteUser(user.getId());
+    }
+
+    public List<AdminResponse> getAdmins() {
+        List<User> users = userRepository.getAdmins();
+
+        List<AdminResponse> admins = users.stream().map( user -> {
+            AdminResponse admin = AdminResponse.builder()
+                    .email(user.getEmail())
+                    .firstName(user.getFirstName())
+                    .lastName(user.getLastName())
+                    .id(user.getId())
+                    .userName(user.getUsername())
+                    .build();
+
+            return admin;
+        }).filter(Objects::nonNull).collect(Collectors.toList());
+
+        return admins;
     }
 }

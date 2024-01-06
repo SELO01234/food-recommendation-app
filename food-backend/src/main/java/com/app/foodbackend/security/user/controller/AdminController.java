@@ -2,12 +2,15 @@ package com.app.foodbackend.security.user.controller;
 
 import com.app.foodbackend.security.auth.dto.RegisterRequest;
 import com.app.foodbackend.security.user.requestDTO.UserRequest;
+import com.app.foodbackend.security.user.responseDTO.AdminResponse;
 import com.app.foodbackend.security.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -23,6 +26,17 @@ public class AdminController {
         try{
             userService.saveUser(user);
             return ResponseEntity.ok().body("User added successfully");
+        }
+        catch(Exception exception){
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/get-all")
+    @PreAuthorize("hasAuthority('admin:read')")
+    public ResponseEntity<List<AdminResponse>> getAdmins(){
+        try{
+            return ResponseEntity.ok().body(userService.getAdmins());
         }
         catch(Exception exception){
             return ResponseEntity.notFound().build();

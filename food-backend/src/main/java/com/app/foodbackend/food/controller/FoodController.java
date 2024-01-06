@@ -2,6 +2,8 @@ package com.app.foodbackend.food.controller;
 
 import com.app.foodbackend.food.dto.FoodCardResponse;
 import com.app.foodbackend.food.dto.FoodResponse;
+import com.app.foodbackend.food.dto.SuggestionDTO;
+import com.app.foodbackend.food.dto.recommendation.RecommendationRes;
 import com.app.foodbackend.food.entity.Food;
 import com.app.foodbackend.food.dto.FoodDTO;
 import com.app.foodbackend.food.service.FoodService;
@@ -18,9 +20,9 @@ public class FoodController {
 
     private final FoodService foodService;
     @PostMapping("/get-suggestion")
-    public ResponseEntity<List<Food>> getFoodBySuggestion(@RequestBody List<String> ingredients){
+    public ResponseEntity<RecommendationRes> getFoodBySuggestion(@RequestBody SuggestionDTO suggestionDTO){
         try{
-            return ResponseEntity.ok().body(foodService.getFoodSuggestion(ingredients));
+            return ResponseEntity.ok().body(foodService.getFoodSuggestion(suggestionDTO));
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }

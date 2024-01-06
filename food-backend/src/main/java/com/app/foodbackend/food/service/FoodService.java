@@ -4,6 +4,7 @@ package com.app.foodbackend.food.service;
 import com.app.foodbackend.food.dto.FoodCardResponse;
 import com.app.foodbackend.food.dto.FoodResponse;
 import com.app.foodbackend.food.dto.SuggestionDTO;
+import com.app.foodbackend.food.dto.recommendation.RecommendationRes;
 import com.app.foodbackend.food.entity.Food;
 import com.app.foodbackend.food.dto.FoodDTO;
 import com.app.foodbackend.food.repository.FoodRepository;
@@ -18,7 +19,6 @@ import com.app.foodbackend.util.UserUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
-import org.hibernate.query.spi.Limit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -127,7 +127,15 @@ public class FoodService extends SearchService<Food> {
 
 
     public void addFood(FoodDTO foodDTO) throws Exception {
-        if(foodDTO == null){
+        if(
+                foodDTO == null ||
+                foodDTO.getName() == null||
+                Objects.equals(foodDTO.getDescription(), "") ||
+                foodDTO.getServings() < 0 ||
+                foodDTO.getIngredients().equals("[\"\"]") || foodDTO.getIngredients().equals("") ||
+                foodDTO.getIngredientsRawStr().equals("[\"\"]") || foodDTO.getIngredientsRawStr().equals("") ||
+                foodDTO.getServingSize().equals("") ||
+                foodDTO.getSteps().equals("[\"\"]") || foodDTO.getSteps().equals("")){
             throw new Exception();
         }
 
@@ -145,17 +153,17 @@ public class FoodService extends SearchService<Food> {
         foodRepository.save(food);
     }
 
-    public List<Food> getFoodSuggestion(List<String> ingredients) throws Exception {
+    public RecommendationRes getFoodSuggestion(SuggestionDTO suggestionDTO) throws Exception {
 
         List<String> visitedFoods = userService.findVisitedFoodsByUserId();
 
-        SuggestionDTO suggestionDTO = new SuggestionDTO(ingredients, visitedFoods);
+        suggestionDTO.setVisitedFoods(visitedFoods);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + SECRET_KEY_FOR_FLASK);
-        HttpEntity<SuggestionDTO> requestEntity = new HttpEntity<>(suggestionDTO, headers);
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.set("Authorization", "Bearer " + SECRET_KEY_FOR_FLASK);
+        HttpEntity<SuggestionDTO> requestEntity = new HttpEntity<>(suggestionDTO);
 
-        List<Food> result = restTemplate.postForObject("http://data-service/get-food", requestEntity,List.class);
+        RecommendationRes result = restTemplate.postForObject("http://data-service/recommend", requestEntity,RecommendationRes.class);
         return result;
     }
 
