@@ -159,9 +159,9 @@ public class FoodService extends SearchService<Food> {
 
         suggestionDTO.setVisitedFoods(visitedFoods);
 
-//        HttpHeaders headers = new HttpHeaders();
-//        headers.set("Authorization", "Bearer " + SECRET_KEY_FOR_FLASK);
-        HttpEntity<SuggestionDTO> requestEntity = new HttpEntity<>(suggestionDTO);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + SECRET_KEY_FOR_FLASK);
+        HttpEntity<SuggestionDTO> requestEntity = new HttpEntity<>(suggestionDTO, headers);
 
         RecommendationRes result = restTemplate.postForObject("http://data-service/recommend", requestEntity,RecommendationRes.class);
         return result;
