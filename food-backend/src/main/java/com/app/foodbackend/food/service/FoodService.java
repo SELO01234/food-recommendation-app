@@ -4,10 +4,12 @@ package com.app.foodbackend.food.service;
 import com.app.foodbackend.food.dto.FoodCardResponse;
 import com.app.foodbackend.food.dto.FoodResponse;
 import com.app.foodbackend.food.dto.SuggestionDTO;
+import com.app.foodbackend.food.dto.recommendation.PaginatedFood;
 import com.app.foodbackend.food.dto.recommendation.RecommendationRes;
 import com.app.foodbackend.food.entity.Food;
 import com.app.foodbackend.food.dto.FoodDTO;
 import com.app.foodbackend.food.repository.FoodRepository;
+import com.app.foodbackend.search.model.RequestFilter;
 import com.app.foodbackend.search.model.SearchRequestDTO;
 import com.app.foodbackend.search.service.SearchService;
 import com.app.foodbackend.security.user.entity.User;
@@ -153,7 +155,7 @@ public class FoodService extends SearchService<Food> {
         foodRepository.save(food);
     }
 
-    public RecommendationRes getFoodSuggestion(SuggestionDTO suggestionDTO) throws Exception {
+    public PaginatedFood getFoodSuggestion(SuggestionDTO suggestionDTO) throws Exception {
 
         List<String> visitedFoods = userService.findVisitedFoodsByUserId();
 
@@ -164,7 +166,59 @@ public class FoodService extends SearchService<Food> {
         HttpEntity<SuggestionDTO> requestEntity = new HttpEntity<>(suggestionDTO, headers);
 
         RecommendationRes result = restTemplate.postForObject("http://data-service/recommend", requestEntity,RecommendationRes.class);
-        return result;
+
+        assert result != null;
+        List<RequestFilter> requestFilters = result.getFiltered_recommendations().stream().map(food -> {
+
+            RequestFilter requestFilter = RequestFilter.builder()
+                    .field("name")
+                    .value(food.getName())
+                    .operator("EQUALS")
+                    .build();
+
+            return requestFilter;
+        }).filter(Objects::nonNull).collect(Collectors.toList());
+
+        SearchRequestDTO requestDTO = SearchRequestDTO.builder()
+                .filters(requestFilters)
+                .build();
+
+        List<Food> foods = search(requestDTO);
+
+        String username = UserUtil.getUsername();
+        Integer userId = (userRepository.findByUserName(username).orElseThrow()).getId();
+
+        List<FoodResponse> foodResponses = foods.stream().map(food -> {
+
+            Float userRating = userFoodRatingRepository.findFoodRatingOfUser(userId, food.getId());
+
+            if(userRating == null){
+                userRating = 0.0F;
+            }
+
+            return FoodResponse.builder()
+                    .name(food.getName())
+                    .description(food.getDescription())
+                    .ingredients(food.getIngredients())
+                    .ingredientsRawStr(food.getIngredientsRawStr())
+                    .servingSize(food.getServingSize())
+                    .servings(food.getServings())
+                    .steps(food.getSteps())
+                    .tags(food.getTags())
+                    .searchTerms(food.getSearchTerms())
+                    .rating(food.getRating())
+                    .userRating(userRating)
+                    .build();
+        }).filter(Objects::nonNull).collect(Collectors.toList());
+
+        PaginatedFood paginatedFood = PaginatedFood.builder()
+                .filtered_recommendations(foodResponses)
+                .pagination(result.getPagination())
+                .page_size(result.getPage_size())
+                .total(result.getTotal())
+                .build();
+
+        return paginatedFood;
     }
 
     public List<Food> getAllFoods() {

@@ -76,7 +76,7 @@ public abstract class SearchService<T> {
         }).filter(Objects::nonNull).collect(Collectors.toList());
 
         criteriaQuery.where(
-                criteriaBuilder.and(predicates.toArray(new Predicate[0]))
+                criteriaBuilder.or(predicates.toArray(new Predicate[0]))
         );
 
         TypedQuery<T> query = entityManager.createQuery(criteriaQuery);
