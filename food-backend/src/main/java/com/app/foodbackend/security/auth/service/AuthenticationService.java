@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -31,6 +32,11 @@ public class AuthenticationService {
     private final RoleService roleService;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+
+    @Value("${access.expiration}")
+    private long accessExpiration;
+    @Value("${refresh.expiration}")
+    private long refreshExpiration;
 
     public void register(RegisterRequest request) throws Exception{
 
@@ -75,15 +81,17 @@ public class AuthenticationService {
         return AuthenticationResponse.builder()
                 .access_token(access_token)
                 .refresh_token(refresh_token)
+                .access_token_expiration(System.currentTimeMillis() + accessExpiration)
+                .refresh_token_expiration(System.currentTimeMillis() + refreshExpiration)
                 .build();
     }
 
-    public void refreshToken(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public AuthenticationResponse refreshToken(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String authorizationHeader = request.getHeader(AUTHORIZATION);
         final String refreshToken;
         final String userName;
         if(authorizationHeader == null && !authorizationHeader.startsWith("Bearer ")){
-            return;
+            return null;
         }
 
         refreshToken = authorizationHeader.substring(7);
@@ -96,10 +104,14 @@ public class AuthenticationService {
                 var authResponse = AuthenticationResponse.builder()
                         .access_token(accessToken)
                         .refresh_token(refreshToken)
+                        .access_token_expiration(System.currentTimeMillis() + accessExpiration)
+                        .refresh_token_expiration(jwtService.extractExpiration(refreshToken).getTime())
                         .build();
 
-                new ObjectMapper().writeValue(response.getOutputStream(), authResponse);
+                return authResponse;
             }
         }
+
+        return null;
     }
 }
