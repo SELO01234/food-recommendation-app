@@ -197,6 +197,7 @@ public class FoodService extends SearchService<Food> {
             }
 
             return FoodResponse.builder()
+                    .id(food.getId())
                     .name(food.getName())
                     .description(food.getDescription())
                     .ingredients(food.getIngredients())

@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class FoodResponse {
 
+    private Integer id;
+
     private String name;
 
     private String description;
